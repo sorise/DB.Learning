@@ -54,6 +54,7 @@ levelDB主要有六个部分来实现LSM-Tree的功能，LevelDb作为存储系�
 * **payload**：该字段则是上面讲的Key:Value数值对。
 
  如果记录类型是FULL，代表了当前记录内容完整地存储在一个物理Block里，没有被不同的物理Block切割开；如果记录被相邻的物理Block切割开，则类型会是其他三种类型中的一种。假设目前存在三条记录，Record A，Record B和Record C，其中Record A大小为10K，Record B 大小为80K，Record C大小为12K，那么其在log文件中的逻辑布局会如下图所示：
+
 <img src="./assets/image-20231208155652952.png" alt="image-20231208155652952"  width="570px" />
 
 * **Record A** 因为大小为10K < 32K，能够放在一个物理Block中，所以其类型为FULL
@@ -78,31 +79,29 @@ SkipList是平衡树的一种替代数据结构，但是和红黑树不相同的
 磁盘数据存储文件。SSTable(Sorted String Table)就是由内存中的数据不断导出并进行Compaction操作后形成的，而且SSTable的所有文件是一种层级结构，第一层为Level 0，第二层为Level 1，依次类推，层级逐渐增高，这也是为何称之为LevelDb的原因。除此之外，**Compaction(压实)**动作会将多个SSTable合并成少量的几个SSTable，**以剔除无效数据，保证数据访问效率并降低磁盘占用**。
 
 LevelDb不同层级有很多SSTable文件（以后缀.sst为特征），所有.sst文件内部布局都是一样的。Log文件是物理分块的，SSTable也一样会将文件划分为固定大小的物理存储块，但是两者逻辑布局大不相同，根本原因是：Log文件中的记录是Key无序的，即先后记录的key大小没有明确大小关系，而.sst文件内部则是根据记录的Key由小到大排列的，从下面介绍的SSTable布局可以体会到Key有序是为何如此设计.sst文件结构的关键。下图展示了.sst文件的内部逻辑解释。
+
 <img src="https://img-blog.csdnimg.cn/20210522115954734.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L01PVV9JVA==,size_16,color_FFFFFF,t_70" alt="img" width="550px" />
 
 
 
 #### 1.4 Manifest文件（磁盘）
-
 Manifest文件中记录SST文件在不同Level的分布，单个SST文件的最大最小key，以及其他一些LevelDB需要的元信息。
 
 ####  1.5 Current文件（磁盘）
-
 从上面的介绍可以看出，LevelDB启动时的首要任务就是找到当前的Manifest，而Manifest可能有多个。Current文件简单的记录了当前Manifest的文件名，从而让这个过程变得非常简单。
-
 
 
 ### 二、源码目录结构
 主要通过源码的目录结构以及阐述关键目录和源文件的职责的方式来展示源码的整个架构。
 
-**cmake**：cmake的相关文件
-**db**：主要机制的实现，包括版本管理，compact，业务读写等功能机制实现；
-**doc**：文档；
-**helpers/memenv**：简单完全内存的文件系统，提供操作目录文件接口；
-**include/leveldb**：头文件，外部工程使用leveldb时引用的头文件；
-**port**：平台相关的实现，主要提供posix/android相关支持；
-**table**：定义了整个leveldb的持久化存储的数据结构
-**util**：通用功能实现。
+* **cmake**：cmake的相关文件
+* **db**：主要机制的实现，包括版本管理，compact，业务读写等功能机制实现；
+* **doc**：文档；
+* **helpers/memenv**：简单完全内存的文件系统，提供操作目录文件接口；
+* **include/leveldb**：头文件，外部工程使用leveldb时引用的头文件；
+* **port**：平台相关的实现，主要提供posix/android相关支持；
+* **table**：定义了整个leveldb的持久化存储的数据结构
+* **util**：通用功能实现。
 
 
 
